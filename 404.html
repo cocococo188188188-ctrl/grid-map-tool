@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>全国城市行政区大网格与换电柜统计工具｜网页版</title>
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: #111827; background: #f3f4f6; }
+    .app { display: grid; grid-template-columns: 370px 1fr 350px; height: 100vh; overflow: hidden; }
+    .panel { background: #fff; border-right: 1px solid #e5e7eb; padding: 18px; overflow-y: auto; }
+    .right { border-left: 1px solid #e5e7eb; border-right: none; }
+    .title { font-size: 20px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.2px; }
+    .subtitle { font-size: 13px; color: #6b7280; line-height: 1.55; margin-bottom: 18px; }
+    .section { padding: 14px 0; border-top: 1px solid #f0f0f0; }
+    .section:first-of-type { border-top: none; }
+    .section h3 { margin: 0 0 12px; font-size: 15px; }
+    label { display: block; font-size: 13px; font-weight: 700; margin: 12px 0 6px; }
+    select, input, textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 9px; padding: 0 10px; font-size: 14px; background: #fff; }
+    select, input { height: 38px; }
+    textarea { min-height: 78px; padding: 10px; resize: vertical; line-height: 1.45; }
+    input[type="checkbox"] { width: auto; height: auto; margin-right: 7px; }
+    .checkline { display: flex; align-items: center; font-size: 13px; color: #374151; margin: 10px 0; }
+    .btn { width: 100%; border: none; border-radius: 10px; padding: 11px 12px; font-size: 14px; font-weight: 750; cursor: pointer; margin-top: 10px; transition: .15s; }
+    .btn:hover { filter: brightness(.97); transform: translateY(-1px); }
+    .primary { background: #2563eb; color: white; }
+    .secondary { background: #eef2ff; color: #1d4ed8; }
+    .success { background: #dcfce7; color: #15803d; }
+    .danger { background: #fee2e2; color: #b91c1c; }
+    .neutral { background: #f3f4f6; color: #374151; }
+    .warning { background: #fef3c7; color: #a16207; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .hint { color: #6b7280; font-size: 12px; line-height: 1.55; margin-top: 8px; }
+    .mini { color: #6b7280; font-size: 12px; }
+    #map { width: 100%; height: 100vh; position: relative; background: #e5e7eb; }
+    .map-runtime-status { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); z-index: 1200; max-width: 720px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.96); border: 1px solid #d1d5db; box-shadow: 0 6px 20px rgba(0,0,0,.15); color: #374151; font-size: 13px; line-height: 1.55; display: none; }
+    .map-runtime-status.error { display:block; border-color:#fecaca; background:#fff1f2; color:#991b1b; }
+    .map-runtime-status.warning { display:block; border-color:#fde68a; background:#fffbeb; color:#92400e; }
+    .map-runtime-status.ok { display:block; border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
+    .metric { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .card { background: #f9fafb; border: 1px solid #eef0f3; border-radius: 12px; padding: 12px; }
+    .card .k { color: #6b7280; font-size: 12px; margin-bottom: 6px; }
+    .card .v { font-size: 22px; font-weight: 850; }
+    .list { margin: 8px 0 0; padding: 0; list-style: none; max-height: 230px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 10px; }
+    .list li { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 10px; border-bottom: 1px solid #f0f0f0; font-size: 12px; align-items: center; cursor: pointer; }
+    .list li:hover { background: #f9fafb; }
+    .list li:last-child { border-bottom: none; }
+    .list .active { background: #eff6ff; }
+    .tag { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px; font-size: 12px; background: #e0f2fe; color: #0369a1; margin-right: 4px; margin-top: 4px; }
+    .toast { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); background: rgba(17,24,39,.92); color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 13px; z-index: 9999; display: none; max-width: 720px; text-align: center; }
+    .legend { background: white; padding: 10px 12px; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.12); font-size: 12px; line-height: 1.8; }
+    .dot { width: 10px; height: 10px; display: inline-block; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    .pill { display:inline-block; padding:2px 7px; border-radius:999px; background:#f3f4f6; color:#374151; font-size:11px; margin-left:4px; }
+    .selected-box { padding: 12px; background: #f9fafb; border: 1px solid #eef0f3; border-radius: 12px; line-height: 1.65; font-size: 13px; }
+    .admin-table-wrap { max-height: 250px; overflow: auto; border: 1px solid #f0f0f0; border-radius: 10px; margin-top: 8px; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .admin-table th, .admin-table td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; text-align: left; vertical-align: middle; }
+    .admin-table th { background: #f9fafb; color: #6b7280; position: sticky; top: 0; z-index: 2; }
+    .admin-table input[type="number"] { height: 28px; padding: 0 6px; font-size: 12px; border-radius: 7px; }
+    .color-dot { display:inline-block; width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); vertical-align: -2px; }
+
+    input[type="file"] { height: auto; padding: 9px; background: #f9fafb; }
+    .file-box { border: 1px dashed #cbd5e1; border-radius: 10px; padding: 10px; background: #f8fafc; }
+    .mapping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .mapping-grid label { margin-top: 6px; }
+    .admin-summary-label { background: rgba(17,24,39,.88); color: #fff; border: 1px solid rgba(255,255,255,.88); border-radius: 8px; padding: 5px 8px; box-shadow: 0 3px 10px rgba(0,0,0,.22); font-size: 11px; line-height: 1.35; text-align: center; white-space: nowrap; pointer-events: none; }
+    .admin-summary-label b { font-size: 12px; }
+    .big-grid-index-label { display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:rgba(255,255,255,.94); border:2px solid #111827; color:#111827; font-size:11px; font-weight:850; box-shadow:0 2px 7px rgba(0,0,0,.28); pointer-events:none; }
+    .status-line { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid #f0f0f0; font-size:12px; }
+    .status-line:last-child { border-bottom:none; }
+    @media (max-width: 1150px) {
+      .app { grid-template-columns: 350px 1fr; }
+      .right { display:none; }
+    }
+  </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="app">
+  <aside class="panel">
+    <h1 class="title">镇街大网格绘制工具</h1>
+    <div class="subtitle">网页版：支持全国城市、行政区大网格、换电柜统计、按城市保存与项目导入导出。</div>
+
+    <div class="section">
+      <h3>1. 选择城市</h3>
+      <div class="row">
+        <div>
+          <label>省 / 直辖市</label>
+          <select id="provinceSelect"><option value="">加载中...</option></select>
+        </div>
+        <div>
+          <label>城市</label>
+          <select id="citySelect"><option value="">请先选择省份</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>城市 Adcode</label>
+          <input id="adcodeInput" placeholder="如：310000 / 330100" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn primary" id="loadCityBtn">加载行政区</button>
+        </div>
+      </div>
+      <button class="btn secondary" id="locateCityBtn">定位到当前城市</button>
+      <div class="row">
+        <button class="btn success" id="saveCityBtn">保存当前城市</button>
+        <button class="btn secondary" id="loadSavedBtn">加载当前城市</button>
+      </div>
+      <button class="btn neutral" id="exportProjectBtn">导出当前城市项目 JSON</button>
+      <label>导入项目 JSON</label>
+      <textarea id="importProjectText" placeholder="粘贴此前导出的项目 JSON，可恢复某个城市的网格数据"></textarea>
+      <button class="btn secondary" id="importProjectBtn">导入并加载项目</button>
+      <button class="btn danger" id="deleteSavedCityBtn">删除当前城市本地保存</button>
+      <div class="hint" id="saveStatus">保存状态：未保存</div>
+      <div class="hint">网页版通过 HTTPS 访问，避免本地 file:// 安全限制；底图优先使用国内线路，失败后自动进入备用或无底图模式。</div>
+    </div>
+
+    <div class="section">
+      <h3>2. 按行政区自动生成一层大网格</h3>
+      <div class="row">
+        <div>
+          <label>默认每区拆分数量</label>
+          <input id="defaultSplitCount" type="number" min="1" max="300" value="6" />
+        </div>
+        <div>
+          <label>边角最小保留</label>
+          <select id="adminMinKeep">
+            <option value="0">不限</option>
+            <option value="5" selected>5%</option>
+            <option value="10">10%</option>
+            <option value="20">20%</option>
+            <option value="30">30%</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn secondary" id="applyDefaultCountBtn">应用默认数量</button>
+        <button class="btn warning" id="resetAdminColorBtn">重置行政区颜色</button>
+      </div>
+      <button class="btn primary" id="generateAdminGridBtn">按行政区生成大网格</button>
+      <div class="hint">生成的是“大网格”，会进入右侧大网格清单；同一行政区内网格颜色统一，不同行政区自动区分颜色。</div>
+      <div class="row">
+        <button class="btn neutral" id="selectAllAdminBtn">全选行政区</button>
+        <button class="btn neutral" id="unselectAllAdminBtn">取消全选</button>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr><th style="width:30px;">选</th><th>行政区</th><th style="width:58px;">目标格</th><th style="width:42px;">颜色</th><th style="width:46px;">大格</th><th style="width:46px;">柜量</th><th style="width:54px;">柜/格</th></tr>
+          </thead>
+          <tbody id="adminTableBody"><tr><td colspan="7" class="mini">请选择城市并加载行政区</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>3. 导入换电柜数据</h3>
+      <div class="file-box">
+        <label style="margin-top:0;">上传 Excel / CSV</label>
+        <input id="cabinetFileInput" type="file" accept=".xlsx,.xls,.csv" />
+        <div class="hint">支持两种识别方式：①表格中有“行政区/区县”字段；②表格中有经纬度，系统按地图边界自动归属行政区。</div>
+      </div>
+      <div id="cabinetMapping" style="display:none;">
+        <div class="mapping-grid">
+          <div><label>行政区字段</label><select id="cabinetAdminField"><option value="">不使用</option></select></div>
+          <div><label>柜子名称/编号</label><select id="cabinetNameField"><option value="">不使用</option></select></div>
+          <div><label>经度字段</label><select id="cabinetLngField"><option value="">不使用</option></select></div>
+          <div><label>纬度字段</label><select id="cabinetLatField"><option value="">不使用</option></select></div>
+        </div>
+        <button class="btn primary" id="countCabinetBtn">统计各行政区换电柜</button>
+      </div>
+      <div class="checkline"><input type="checkbox" id="showCabinetPoints" checked />地图显示换电柜点位</div>
+      <div class="row">
+        <button class="btn neutral" id="clearCabinetBtn">清空换电柜数据</button>
+        <button class="btn secondary" id="exportCabinetSummaryBtn">导出行政区汇总</button>
+      </div>
+      <div id="cabinetImportStatus" class="hint">尚未导入换电柜数据。</div>
+    </div>
+
+    <div class="section">
+      <h3>4. 连续绘制镇街大网格</h3>
+      <label>当前要绘制的镇/街道名称</label>
+      <input id="townName" placeholder="如：唐镇 / 高桥镇 / 莘庄镇" />
+      <div class="hint">保留 V3 的手动画大网格能力。先填写名称，再用地图左上角的多边形/矩形工具画范围。</div>
+      <button class="btn success" id="loadMultiDemoBtn">加载多镇街示例</button>
+      <button class="btn neutral" id="clearTownBtn">清空全部大网格</button>
+    </div>
+
+    <div class="section">
+      <h3>5. 大网格编辑</h3>
+      <div class="hint">点击大网格或右侧列表可选中。地图左上角“编辑”按钮可以拖动边界微调。</div>
+      <label>重命名选中大网格</label>
+      <input id="renameTownName" placeholder="输入新名称" />
+      <button class="btn secondary" id="renameTownBtn">重命名选中大网格</button>
+      <button class="btn danger" id="deleteTownBtn">删除选中大网格</button>
+      <button class="btn neutral" id="cancelTownSelectBtn">取消选择</button>
+    </div>
+
+    <div class="section">
+      <h3>6. 拆分小网格，可选</h3>
+      <div class="row">
+        <div>
+          <label>小网格边长</label>
+          <select id="gridSize">
+            <option value="300">300m</option>
+            <option value="500" selected>500m</option>
+            <option value="800">800m</option>
+            <option value="1000">1km</option>
+            <option value="2000">2km</option>
+          </select>
+        </div>
+        <div>
+          <label>最小保留</label>
+          <select id="minKeep">
+            <option value="0">不限</option>
+            <option value="20">20%</option>
+            <option value="30" selected>30%</option>
+            <option value="50">50%</option>
+          </select>
+        </div>
+      </div>
+      <div class="checkline"><input type="checkbox" id="clipEdge" checked />边缘小网格自动裁剪</div>
+      <div class="checkline"><input type="checkbox" id="showChildGrid" checked />显示小网格图层</div>
+      <button class="btn primary" id="generateSelectedBtn">拆分选中大网格</button>
+      <button class="btn secondary" id="generateAllBtn">拆分全部大网格</button>
+      <button class="btn neutral" id="clearChildGridBtn">清空小网格</button>
+    </div>
+
+    <div class="section">
+      <h3>7. 小网格编辑</h3>
+      <div class="hint">点击小网格可多选。删除小网格不影响镇街大网格边界。</div>
+      <button class="btn danger" id="deleteChildBtn">删除选中小网格</button>
+      <button class="btn neutral" id="clearChildSelectBtn">取消小网格选择</button>
+    </div>
+
+    <div class="section">
+      <h3>8. 导出</h3>
+      <button class="btn secondary" id="exportTownGeoBtn">导出大网格 GeoJSON</button>
+      <button class="btn secondary" id="exportTownCsvBtn">导出大网格 CSV</button>
+      <button class="btn secondary" id="exportChildGeoBtn">导出小网格 GeoJSON</button>
+      <button class="btn secondary" id="exportChildCsvBtn">导出小网格 CSV</button>
+    </div>
+  </aside>
+
+  <main id="map"><div id="mapRuntimeStatus" class="map-runtime-status">正在加载地图组件...</div></main>
+
+  <aside class="panel right">
+    <h1 class="title">绘制结果</h1>
+    <div class="subtitle">先看行政区大网格数量与换电柜数量，再调整拆分数量；大网格边界与编号已强化。</div>
+
+    <div class="section">
+      <h3>统计概览</h3>
+      <div class="metric">
+        <div class="card"><div class="k">行政区数</div><div class="v" id="adminCount">0</div></div>
+        <div class="card"><div class="k">大网格数</div><div class="v" id="townCount">0</div></div>
+        <div class="card"><div class="k">大网格面积 km²</div><div class="v" id="townArea">0</div></div>
+        <div class="card"><div class="k">小网格数</div><div class="v" id="childCount">0</div></div>
+        <div class="card"><div class="k">换电柜数</div><div class="v" id="cabinetCount">0</div></div>
+        <div class="card"><div class="k">未匹配柜数</div><div class="v" id="cabinetUnmatchedCount">0</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>城市保存状态</h3>
+      <div id="cityStorageInfo" class="selected-box">暂无保存记录</div>
+    </div>
+
+    <div class="section">
+      <h3>当前选中大网格</h3>
+      <div id="selectedTownInfo" class="selected-box">未选择大网格</div>
+    </div>
+
+    <div class="section">
+      <h3>行政区网格与柜量</h3>
+      <div class="hint">“柜/格”可直接用于判断当前大网格数量是否需要增加或减少。</div>
+      <ul class="list" id="adminList"></ul>
+    </div>
+
+    <div class="section">
+      <h3>大网格清单</h3>
+      <ul class="list" id="townList"></ul>
+    </div>
+
+    <div class="section">
+      <h3>小网格清单</h3>
+      <ul class="list" id="childList"></ul>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  const runtimeStatus = document.getElementById('mapRuntimeStatus');
+  function setRuntimeStatus(message, type = 'warning', autoHide = false) {
+    if (!runtimeStatus) return;
+    runtimeStatus.textContent = message;
+    runtimeStatus.className = `map-runtime-status ${type}`;
+    if (autoHide) setTimeout(() => { runtimeStatus.style.display = 'none'; }, 3600);
+  }
+  const missingDeps = [];
+  if (!window.L) missingDeps.push('Leaflet 地图库');
+  if (window.L && (!L.Control || !L.Control.Draw)) missingDeps.push('Leaflet Draw 绘制组件');
+  if (!window.turf) missingDeps.push('Turf 空间计算组件');
+  if (missingDeps.length) {
+    setRuntimeStatus(`地图组件加载失败：${missingDeps.join('、')}。请确认电脑可访问 cdn.bootcdn.net，或使用 Chrome / Edge 打开。`, 'error');
+    console.error('Missing dependencies:', missingDeps);
+    return;
+  }
+  setRuntimeStatus('地图组件加载成功，正在加载底图和行政区边界...', 'ok', true);
+
+  const municipalityNames = new Set(['北京市','天津市','上海市','重庆市']);
+  const STORAGE_PREFIX = 'townGridCityProjectV3Nation:';
+  const manualPalette = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#f97316', '#0891b2', '#be123c', '#4f46e5', '#0f766e', '#a16207'];
+
+  let currentCity = { name: '上海市', adcode: '310000', provinceName: '上海市', provinceAdcode: '310000', center: [31.2304, 121.4737], zoom: 10 };
+  let loadedProvinces = [];
+  let loadedCities = [];
+  let districts = [];
+  let districtMeta = {};
+  let townSeq = 1;
+  let selectedTownId = '';
+  let childGridFeatures = [];
+  let selectedChildIds = new Set();
+  let cabinetRawRows = [];
+  let cabinetHeaders = [];
+  let cabinetFeatures = [];
+  let cabinetStats = {};
+  let cabinetTotal = 0;
+  let cabinetUnmatched = 0;
+
+  const $ = id => document.getElementById(id);
+  const map = L.map('map', { preferCanvas: true }).setView(currentCity.center, currentCity.zoom);
+
+  // 网页部署版：优先使用国内 GeoQ 底图，减少公司网络访问境外瓦片超时的问题。
+  const geoqBase = L.tileLayer('https://map.geoq.cn/ArcGIS/rest/services/ChinaOnlineCommunity/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18, attribution: '地图 © GeoQ'
+  });
+  const osmBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap'
+  });
+  const noBase = L.layerGroup();
+  let activeBase = geoqBase.addTo(map);
+  let geoqErrors = 0;
+  let osmErrors = 0;
+  geoqBase.on('tileerror', () => {
+    geoqErrors += 1;
+    if (geoqErrors === 6 && map.hasLayer(geoqBase)) {
+      map.removeLayer(geoqBase);
+      activeBase = osmBase.addTo(map);
+      setRuntimeStatus('国内主底图加载失败，已自动切换到备用底图。', 'warning', true);
+    }
+  });
+  osmBase.on('tileerror', () => {
+    osmErrors += 1;
+    if (osmErrors === 6 && map.hasLayer(osmBase)) {
+      map.removeLayer(osmBase);
+      activeBase = noBase.addTo(map);
+      setRuntimeStatus('在线底图均未加载，但行政区、网格绘制和保存功能仍可使用。请检查公司网络、防火墙或代理设置。', 'warning');
+    }
+  });
+  L.control.layers({
+    '国内街道底图': geoqBase,
+    'OpenStreetMap 备用底图': osmBase,
+    '无底图（仅看行政区和网格）': noBase
+  }, null, { position: 'topright' }).addTo(map);
+
+  const districtLayer = L.geoJSON(null, {
+    style: styleDistrict,
+    onEachFeature: (feature, layer) => {
+      const ad = getAdcode(feature);
+      layer.bindTooltip(() => {
+        const m = districtMeta[ad] || {};
+        const grids = countBigGridsByAdmin()[ad] || 0;
+        const cabinets = cabinetStats[ad] || 0;
+        const avg = grids ? (cabinets / grids).toFixed(1) : '-';
+        return `${m.name || getName(feature)}<br>大网格：${grids}<br>换电柜：${cabinets}<br>柜/格：${avg}<br>adcode：${ad}`;
+      }, { sticky: true });
+    }
+  }).addTo(map);
+
+  const townGroup = new L.FeatureGroup();
+  map.addLayer(townGroup);
+  let childGridLayer = L.geoJSON(null, { style: styleChildGrid, onEachFeature: onEachChildGrid }).addTo(map);
+  const bigGridLabelLayer = L.layerGroup().addTo(map);
+  const adminSummaryLayer = L.layerGroup().addTo(map);
+  let cabinetLayer = L.geoJSON(null, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+      radius: 3.2,
+      color: '#111827',
+      weight: 1,
+      fillColor: feature.properties?.matched ? '#f97316' : '#dc2626',
+      fillOpacity: 0.88
+    }),
+    onEachFeature: (feature, layer) => {
+      const p = feature.properties || {};
+      layer.bindTooltip(`${escapeHtml(p.cabinet_name || '换电柜')}<br>${escapeHtml(p.admin_name || '未匹配行政区')}`, { sticky: true });
+    }
+  }).addTo(map);
+
+  const drawControl = new L.Control.Draw({
+    draw: {
+      polyline: false,
+      marker: false,
+      circle: false,
+      circlemarker: false,
+      polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#2563eb', weight: 2.2, fillOpacity: 0.12 } },
+      rectangle: { shapeOptions: { color: '#2563eb', weight: 2.2, fillOpacity: 0.12 } }
+    },
+    edit: { featureGroup: townGroup }
+  });
+  map.addControl(drawControl);
+
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = function() {
+    const div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = '<div><span class="dot" style="background:#dbeafe;border:3px solid #2563eb"></span>大网格（粗边框）</div><div><span class="dot" style="background:#fef3c7;border:2px solid #f59e0b"></span>选中对象</div><div><span class="dot" style="background:#f97316;border:1px solid #111827;border-radius:50%"></span>换电柜点位</div><div><span class="dot" style="background:#e0f2fe;border:1px solid #0891b2"></span>小网格</div><div><span class="dot" style="background:#fff;border:1px dashed #64748b"></span>行政区边界</div>';
+    return div;
+  };
+  legend.addTo(map);
+
+  map.on(L.Draw.Event.CREATED, function (e) {
+    const nameInput = $('townName');
+    const name = nameInput.value.trim() || `镇街大网格${townSeq}`;
+    addTownLayer(e.layer, name, currentCity, { source: 'manual' });
+    nameInput.value = '';
+    updateStats();
+    toast(`已保存为大网格：${name}。可以继续画下一个镇/街道。`);
+  });
+
+  map.on(L.Draw.Event.EDITED, function (e) {
+    e.layers.eachLayer(layer => refreshTownAdminAssignment(layer));
+    updateAllTownAreaProps();
+    updateStats();
+    toast('大网格边界及行政区归属已更新。如已拆分小网格，请重新拆分。');
+  });
+
+  map.on(L.Draw.Event.DELETED, function (e) {
+    e.layers.eachLayer(layer => {
+      if (layer._townProps) {
+        childGridFeatures = childGridFeatures.filter(f => f.properties.parent_big_grid_id !== layer._townProps.big_grid_id);
+        if (selectedTownId === layer._townProps.big_grid_id) selectedTownId = '';
+      }
+    });
+    selectedChildIds.clear();
+    renderChildGrid();
+    updateStats();
+    toast('已删除大网格及其对应小网格。');
+  });
+
+  $('provinceSelect').onchange = async e => { await loadProvinceCities(e.target.value); };
+  $('citySelect').onchange = e => { $('adcodeInput').value = e.target.value || ''; };
+  $('loadCityBtn').onclick = () => {
+    const adcode = ($('adcodeInput').value || $('citySelect').value || '').trim();
+    const cityName = (loadedCities.find(c => c.adcode === adcode) || loadedProvinces.find(p => p.adcode === adcode) || {}).name;
+    loadCityDistricts(adcode, cityName);
+  };
+  $('locateCityBtn').onclick = locateCurrentCity;
+  $('saveCityBtn').onclick = () => saveCityProject(true);
+  $('loadSavedBtn').onclick = () => loadCityProject(getCurrentCityKey(), true);
+  $('exportProjectBtn').onclick = exportCityProject;
+  $('importProjectBtn').onclick = importCityProject;
+  $('deleteSavedCityBtn').onclick = deleteSavedCityProject;
+  $('applyDefaultCountBtn').onclick = applyDefaultSplitCount;
+  $('resetAdminColorBtn').onclick = resetDistrictColors;
+  $('selectAllAdminBtn').onclick = () => selectAllDistricts(true);
+  $('unselectAllAdminBtn').onclick = () => selectAllDistricts(false);
+  $('generateAdminGridBtn').onclick = generateAdminBigGrids;
+  $('loadMultiDemoBtn').onclick = loadMultiDemo;
+  $('clearTownBtn').onclick = clearAllTowns;
+  $('renameTownBtn').onclick = renameSelectedTown;
+  $('deleteTownBtn').onclick = deleteSelectedTown;
+  $('cancelTownSelectBtn').onclick = () => { selectedTownId = ''; refreshTownStyles(); updateStats(); };
+  $('generateSelectedBtn').onclick = generateSelectedTownGrid;
+  $('generateAllBtn').onclick = generateAllTownGrid;
+  $('clearChildGridBtn').onclick = clearChildGrid;
+  $('deleteChildBtn').onclick = deleteSelectedChildGrid;
+  $('clearChildSelectBtn').onclick = () => { selectedChildIds.clear(); renderChildGrid(); updateStats(); };
+  $('showChildGrid').onchange = toggleChildGridLayer;
+  $('exportTownGeoBtn').onclick = exportTownGeoJSON;
+  $('exportTownCsvBtn').onclick = exportTownCSV;
+  $('exportChildGeoBtn').onclick = exportChildGeoJSON;
+  $('exportChildCsvBtn').onclick = exportChildCSV;
+  $('cabinetFileInput').onchange = handleCabinetFile;
+  $('countCabinetBtn').onclick = countCabinetsByDistrict;
+  $('showCabinetPoints').onchange = toggleCabinetLayer;
+  $('clearCabinetBtn').onclick = clearCabinetData;
+  $('exportCabinetSummaryBtn').onclick = exportCabinetSummary;
+
+  function datavUrl(adcode, full = true) { return `https://geo.datav.aliyun.com/areas_v3/bound/${adcode}${full ? '_full' : ''}.json`; }
+  async function fetchGeo(adcode, full = true) {
+    const urls = full ? [datavUrl(adcode, true), datavUrl(adcode, false)] : [datavUrl(adcode, false), datavUrl(adcode, true)];
+    let lastErr = null;
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { cache: 'force-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (json && json.features && json.features.length) return json;
+        if (json && json.type && json.geometry) return { type: 'FeatureCollection', features: [json] };
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('无法加载行政区边界');
+  }
+
+  async function initProvinces() {
+    try {
+      updateSaveStatus('正在加载全国省份列表...');
+      const geo = await fetchGeo('100000', true);
+      loadedProvinces = geo.features.map(f => ({ name: getName(f), adcode: String(f.properties.adcode), feature: f }))
+        .sort((a,b) => a.adcode.localeCompare(b.adcode));
+      $('provinceSelect').innerHTML = ['<option value="">请选择省 / 直辖市</option>'].concat(loadedProvinces.map(p => `<option value="${p.adcode}">${p.name}</option>`)).join('');
+      const sh = loadedProvinces.find(p => p.name === '上海市');
+      if (sh) {
+        $('provinceSelect').value = sh.adcode;
+        await loadProvinceCities(sh.adcode);
+        $('citySelect').value = sh.adcode;
+        $('adcodeInput').value = sh.adcode;
+        await loadCityDistricts(sh.adcode, sh.name, true);
+      }
+    } catch (e) {
+      console.error(e);
+      $('provinceSelect').innerHTML = '<option value="">加载失败，可手动输入 adcode</option>';
+      updateSaveStatus('全国城市列表加载失败。可手动输入城市 adcode 后点击“加载行政区”。');
+      toast('省份列表加载失败，请检查网络。');
+    }
+    updateCityStorageInfo();
+  }
+
+  async function loadProvinceCities(provinceAdcode) {
+    const province = loadedProvinces.find(p => p.adcode === String(provinceAdcode));
+    if (!province) return;
+    currentCity.provinceName = province.name;
+    currentCity.provinceAdcode = province.adcode;
+    $('citySelect').innerHTML = '<option value="">加载城市中...</option>';
+    $('adcodeInput').value = '';
+    try {
+      if (municipalityNames.has(province.name)) {
+        loadedCities = [{ name: province.name, adcode: province.adcode }];
+        $('citySelect').innerHTML = `<option value="${province.adcode}">${province.name}</option>`;
+        $('citySelect').value = province.adcode;
+        $('adcodeInput').value = province.adcode;
+        return;
+      }
+      const geo = await fetchGeo(province.adcode, true);
+      loadedCities = geo.features.map(f => ({ name: getName(f), adcode: String(f.properties.adcode), feature: f }))
+        .filter(c => c.adcode && c.adcode !== province.adcode)
+        .sort((a,b) => a.adcode.localeCompare(b.adcode));
+      $('citySelect').innerHTML = ['<option value="">请选择城市</option>'].concat(loadedCities.map(c => `<option value="${c.adcode}">${c.name}</option>`)).join('');
+    } catch (e) {
+      console.error(e);
+      loadedCities = [];
+      $('citySelect').innerHTML = '<option value="">城市加载失败，可手动输入 adcode</option>';
+      toast('城市列表加载失败，可手动输入 adcode。');
+    }
+  }
+
+  async function loadCityDistricts(adcode, cityNameOverride, silent = false) {
+    if (!adcode) { toast('请先选择城市或输入 adcode。'); return; }
+    autoSaveCurrentCityIfNeeded();
+    clearMapForNewCity();
+    try {
+      updateSaveStatus(`正在加载 ${adcode} 的行政区边界...`);
+      let geo = await fetchGeo(adcode, true);
+      let features = geo.features.map(cleanFeature).filter(f => f.geometry);
+      if (features.length === 1 && String(features[0].properties?.adcode || '') === String(adcode)) {
+        try {
+          const simple = await fetchGeo(adcode, false);
+          if (simple.features && simple.features.length) features = simple.features.map(cleanFeature).filter(f => f.geometry);
+        } catch (e) {}
+      }
+      const cityOpt = loadedCities.find(c => c.adcode === String(adcode));
+      const provinceOpt = loadedProvinces.find(p => p.adcode === String(adcode));
+      currentCity = {
+        name: cityNameOverride || (cityOpt && cityOpt.name) || (provinceOpt && provinceOpt.name) || `城市${adcode}`,
+        adcode: String(adcode),
+        provinceName: currentCity.provinceName || (provinceOpt && provinceOpt.name) || '',
+        provinceAdcode: currentCity.provinceAdcode || (provinceOpt && provinceOpt.adcode) || '',
+        center: currentCity.center || [31.2304, 121.4737],
+        zoom: 10
+      };
+      districts = features;
+      buildDistrictMeta(features);
+      districtLayer.addData({ type: 'FeatureCollection', features });
+      const center = turf.centerOfMass({ type: 'FeatureCollection', features }).geometry.coordinates;
+      currentCity.center = [center[1], center[0]];
+      fitToLayer(districtLayer);
+      renderAdminTable();
+      updateStats();
+      updateSaveStatus(`已加载 ${currentCity.name}：${districts.length} 个行政区。可设置拆分数量后生成大网格。`);
+      loadCityProject(getCurrentCityKey(), false, true);
+      if (!silent) toast(`已加载：${currentCity.name}`);
+    } catch (e) {
+      console.error(e);
+      updateSaveStatus(`行政区加载失败：${e.message || e}`);
+      toast('行政区加载失败，请检查网络或 adcode。');
+    }
+  }
+
+  function buildDistrictMeta(features) {
+    districtMeta = {};
+    const total = Math.max(1, features.length);
+    features.forEach((f, idx) => {
+      const ad = getAdcode(f);
+      districtMeta[ad] = {
+        name: getName(f),
+        adcode: ad,
+        selected: true,
+        splitCount: Math.max(1, Number($('defaultSplitCount').value || 6)),
+        color: makeDistrictColor(idx, total),
+        generated: 0
+      };
+    });
+  }
+
+  function makeDistrictColor(index, total) {
+    const hue = Math.round((index * (360 / Math.max(total, 1)) + 212) % 360);
+    return `hsl(${hue}, 72%, 45%)`;
+  }
+
+  function styleDistrict(feature) {
+    const m = districtMeta[getAdcode(feature)] || {};
+    const color = m.color || '#64748b';
+    return { color, weight: 2.2, fillColor: color, fillOpacity: 0.045, opacity: 0.95, dashArray: '6,4' };
+  }
+
+  function resetDistrictColors() {
+    const total = Math.max(1, districts.length);
+    districts.forEach((f, idx) => {
+      const m = districtMeta[getAdcode(f)];
+      if (m) m.color = makeDistrictColor(idx, total);
+    });
+    getTownLayers().forEach(layer => {
+      const p = layer._townProps || {};
+      if (p.admin_adcode && districtMeta[p.admin_adcode]) {
+        p.color = districtMeta[p.admin_adcode].color;
+        updateChildColorForParent(p.big_grid_id, p.color);
+      }
+    });
+    districtLayer.setStyle(styleDistrict);
+    refreshTownStyles();
+    renderChildGrid();
+    renderCabinetLayer();
+    renderAdminTable();
+    updateStats();
+    toast('已按行政区重新分配颜色。');
+  }
+
+  function renderAdminTable() {
+    const tbody = $('adminTableBody');
+    if (!districts.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="mini">请选择城市并加载行政区</td></tr>';
+      return;
+    }
+    const counts = countBigGridsByAdmin();
+    districts.forEach(f => {
+      const ad = getAdcode(f);
+      if (districtMeta[ad]) districtMeta[ad].generated = counts[ad] || 0;
+    });
+    tbody.innerHTML = districts.map(f => {
+      const ad = getAdcode(f);
+      const m = districtMeta[ad];
+      const gridCount = m.generated || 0;
+      const cabinetCount = cabinetStats[ad] || 0;
+      const perGrid = gridCount ? (cabinetCount / gridCount).toFixed(1) : '-';
+      return `<tr>
+        <td><input class="admin-check" data-adcode="${ad}" type="checkbox" ${m.selected ? 'checked' : ''}></td>
+        <td title="${escapeHtml(m.name)}">${escapeHtml(m.name)}</td>
+        <td><input class="admin-count" data-adcode="${ad}" type="number" min="1" max="300" value="${m.splitCount}"></td>
+        <td><span class="color-dot" style="background:${m.color}"></span></td>
+        <td>${gridCount}</td>
+        <td>${cabinetCount}</td>
+        <td>${perGrid}</td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('.admin-check').forEach(el => {
+      el.addEventListener('change', () => { const m = districtMeta[el.dataset.adcode]; if (m) m.selected = el.checked; });
+    });
+    tbody.querySelectorAll('.admin-count').forEach(el => {
+      el.addEventListener('change', () => { const m = districtMeta[el.dataset.adcode]; if (m) m.splitCount = Math.max(1, Number(el.value || 1)); });
+    });
+  }
+
+  function selectAllDistricts(flag) {
+    Object.values(districtMeta).forEach(m => m.selected = flag);
+    renderAdminTable();
+  }
+
+  function applyDefaultSplitCount() {
+    const n = Math.max(1, Number($('defaultSplitCount').value || 6));
+    Object.values(districtMeta).forEach(m => m.splitCount = n);
+    renderAdminTable();
+    toast(`已将所有行政区拆分数量设为 ${n}`);
+  }
+
+  async function handleCabinetFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (typeof XLSX === 'undefined') {
+      toast('Excel 解析组件加载失败，请检查网络后刷新页面。');
+      return;
+    }
+    try {
+      $('cabinetImportStatus').textContent = `正在读取：${file.name}...`;
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', raw: false });
+      if (!rows.length) throw new Error('表格没有可读取的数据');
+      cabinetRawRows = rows;
+      cabinetHeaders = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+      populateCabinetFieldSelects();
+      $('cabinetMapping').style.display = 'block';
+      $('cabinetImportStatus').textContent = `已读取 ${rows.length} 行，工作表：${sheetName}。请确认字段后点击统计。`;
+      toast(`已读取 ${rows.length} 条换电柜记录`);
+    } catch (e) {
+      console.error(e);
+      cabinetRawRows = [];
+      cabinetHeaders = [];
+      $('cabinetMapping').style.display = 'none';
+      $('cabinetImportStatus').textContent = `读取失败：${e.message || e}`;
+      toast('换电柜文件读取失败。');
+    }
+  }
+
+  function populateCabinetFieldSelects() {
+    const configs = [
+      ['cabinetAdminField', ['行政区','所属行政区','区县','所属区县','区/县','行政区域','区域','district','county','area']],
+      ['cabinetNameField', ['换电柜名称','柜子名称','柜机名称','设备名称','站点名称','换电柜编号','柜子编号','设备编号','cabinet_name','name','id']],
+      ['cabinetLngField', ['经度','longitude','lng','lon','坐标经度','gcj02_lng','bd_lng']],
+      ['cabinetLatField', ['纬度','latitude','lat','坐标纬度','gcj02_lat','bd_lat']]
+    ];
+    configs.forEach(([id, aliases]) => {
+      const el = $(id);
+      el.innerHTML = '<option value="">不使用</option>' + cabinetHeaders.map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
+      const match = detectHeader(cabinetHeaders, aliases);
+      if (match) el.value = match;
+    });
+  }
+
+  function detectHeader(headers, aliases) {
+    const normalizedAliases = aliases.map(normalizeHeader);
+    let found = headers.find(h => normalizedAliases.includes(normalizeHeader(h)));
+    if (found) return found;
+    found = headers.find(h => normalizedAliases.some(a => normalizeHeader(h).includes(a) || a.includes(normalizeHeader(h))));
+    return found || '';
+  }
+
+  function normalizeHeader(value) {
+    return String(value || '').trim().toLowerCase().replace(/[\s_\-\/（）()]/g, '');
+  }
+
+  function normalizeAdminName(value) {
+    return String(value || '').trim().replace(/\s+/g, '').replace(/[·•]/g, '');
+  }
+
+  function adminNameVariants(value) {
+    const raw = normalizeAdminName(value);
+    const simple = raw
+      .replace(/^(中国|中华人民共和国)/, '')
+      .replace(/(特别行政区|自治州|自治县|市辖区|新区|开发区|区|县|市|旗)$/g, '');
+    return new Set([raw, simple].filter(Boolean));
+  }
+
+  function matchDistrictByName(value) {
+    const variants = adminNameVariants(value);
+    if (!variants.size) return null;
+    let exact = null;
+    districts.some(f => {
+      const ad = getAdcode(f);
+      const m = districtMeta[ad] || { name: getName(f) };
+      const targetVariants = adminNameVariants(m.name);
+      const hit = [...variants].some(v => targetVariants.has(v));
+      if (hit) { exact = { feature: f, adcode: ad, name: m.name }; return true; }
+      return false;
+    });
+    if (exact) return exact;
+    let fuzzy = null;
+    districts.some(f => {
+      const ad = getAdcode(f);
+      const m = districtMeta[ad] || { name: getName(f) };
+      const targetVariants = adminNameVariants(m.name);
+      const hit = [...variants].some(v => [...targetVariants].some(t => v.length >= 2 && t.length >= 2 && (v.includes(t) || t.includes(v))));
+      if (hit) { fuzzy = { feature: f, adcode: ad, name: m.name }; return true; }
+      return false;
+    });
+    return fuzzy;
+  }
+
+  function parseCoord(value) {
+    if (value === null || value === undefined || value === '') return NaN;
+    const n = Number(String(value).trim().replace(/,/g, ''));
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function findDistrictByPoint(lng, lat) {
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+    const pt = turf.point([lng, lat]);
+    for (const f of districts) {
+      try {
+        if (turf.booleanPointInPolygon(pt, f)) {
+          const ad = getAdcode(f);
+          return { feature: f, adcode: ad, name: districtMeta[ad]?.name || getName(f) };
+        }
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function countCabinetsByDistrict() {
+    if (!districts.length) { toast('请先加载城市行政区。'); return; }
+    if (!cabinetRawRows.length) { toast('请先上传换电柜 Excel 或 CSV。'); return; }
+    const adminField = $('cabinetAdminField').value;
+    const nameField = $('cabinetNameField').value;
+    const lngField = $('cabinetLngField').value;
+    const latField = $('cabinetLatField').value;
+    if (!adminField && !(lngField && latField)) {
+      toast('至少选择“行政区字段”，或同时选择经度和纬度字段。');
+      return;
+    }
+
+    cabinetStats = {};
+    cabinetFeatures = [];
+    cabinetTotal = cabinetRawRows.length;
+    cabinetUnmatched = 0;
+
+    cabinetRawRows.forEach((row, index) => {
+      const lng = lngField ? parseCoord(row[lngField]) : NaN;
+      const lat = latField ? parseCoord(row[latField]) : NaN;
+      let matched = adminField ? matchDistrictByName(row[adminField]) : null;
+      if (!matched && Number.isFinite(lng) && Number.isFinite(lat)) matched = findDistrictByPoint(lng, lat);
+      if (matched) {
+        cabinetStats[matched.adcode] = (cabinetStats[matched.adcode] || 0) + 1;
+      } else {
+        cabinetUnmatched++;
+      }
+      if (Number.isFinite(lng) && Number.isFinite(lat)) {
+        cabinetFeatures.push({
+          type: 'Feature',
+          properties: {
+            cabinet_name: nameField ? String(row[nameField] || `换电柜${index + 1}`) : `换电柜${index + 1}`,
+            admin_name: matched ? matched.name : '',
+            admin_adcode: matched ? matched.adcode : '',
+            matched: !!matched
+          },
+          geometry: { type: 'Point', coordinates: [lng, lat] }
+        });
+      }
+    });
+
+    renderCabinetLayer();
+    updateStats();
+    $('cabinetImportStatus').textContent = `统计完成：共 ${cabinetTotal} 条，匹配 ${cabinetTotal - cabinetUnmatched} 条，未匹配 ${cabinetUnmatched} 条；地图可显示 ${cabinetFeatures.length} 个有经纬度的点位。`;
+    toast(`已统计 ${cabinetTotal} 个换电柜`);
+  }
+
+  function renderCabinetLayer() {
+    cabinetLayer.clearLayers();
+    if (cabinetFeatures.length) cabinetLayer.addData({ type: 'FeatureCollection', features: cabinetFeatures });
+    toggleCabinetLayer();
+  }
+
+  function toggleCabinetLayer() {
+    const show = $('showCabinetPoints').checked;
+    if (show) {
+      if (!map.hasLayer(cabinetLayer)) cabinetLayer.addTo(map);
+      if (cabinetLayer.bringToFront) cabinetLayer.bringToFront();
+    } else if (map.hasLayer(cabinetLayer)) {
+      map.removeLayer(cabinetLayer);
+    }
+  }
+
+  function clearCabinetData(showToast = true) {
+    cabinetRawRows = [];
+    cabinetHeaders = [];
+    cabinetFeatures = [];
+    cabinetStats = {};
+    cabinetTotal = 0;
+    cabinetUnmatched = 0;
+    cabinetLayer.clearLayers();
+    $('cabinetFileInput').value = '';
+    $('cabinetMapping').style.display = 'none';
+    $('cabinetImportStatus').textContent = '尚未导入换电柜数据。';
+    updateStats();
+    if (showToast) toast('已清空换电柜数据。');
+  }
+
+  function exportCabinetSummary() {
+    if (!districts.length) { toast('请先加载城市行政区。'); return; }
+    const gridCounts = countBigGridsByAdmin();
+    const header = ['province','city','city_adcode','admin_name','admin_adcode','big_grid_count','cabinet_count','cabinet_per_grid'];
+    const rows = districts.map(f => {
+      const ad = getAdcode(f);
+      const m = districtMeta[ad] || {};
+      const grids = gridCounts[ad] || 0;
+      const cabinets = cabinetStats[ad] || 0;
+      const avg = grids ? (cabinets / grids).toFixed(2) : '';
+      return [currentCity.provinceName || '', currentCity.name || '', currentCity.adcode || '', m.name || getName(f), ad, grids, cabinets, avg];
+    });
+    exportRows(header, rows, `${currentCity.name || '城市'}_行政区网格柜量汇总_${Date.now()}.csv`);
+  }
+
+  function generateAdminBigGrids() {
+    if (!currentCity || !districts.length) { toast('请先加载城市行政区。'); return; }
+    const selected = districts.filter(f => districtMeta[getAdcode(f)] && districtMeta[getAdcode(f)].selected);
+    if (!selected.length) { toast('请至少选择一个行政区。'); return; }
+    const existingAuto = getTownLayers().filter(l => l._townProps?.source === 'admin_auto').length;
+    if (existingAuto && !confirm('重新生成会替换当前城市已有的行政区自动大网格，手动画的大网格会保留，是否继续？')) return;
+    removeAutoAdminBigGrids();
+    const minKeep = Math.max(0, Math.min(80, Number($('adminMinKeep').value || 0))) / 100;
+    let total = 0;
+    const failed = [];
+    selected.forEach(districtFeature => {
+      const ad = getAdcode(districtFeature);
+      const meta = districtMeta[ad];
+      const target = Math.max(1, Number(meta.splitCount || 1));
+      try {
+        const cells = splitFeatureByCount(districtFeature, target, minKeep, true);
+        cells.forEach((cell, i) => {
+          const layer = L.geoJSON(cell, { style: { color: meta.color, weight: 2.1, fillOpacity: 0.14 } }).getLayers()[0];
+          const idx = i + 1;
+          const name = `${meta.name}-${String(idx).padStart(2, '0')}`;
+          const id = `${currentCity.adcode}-${ad}-A${String(idx).padStart(3, '0')}`;
+          addTownLayer(layer, name, currentCity, {
+            source: 'admin_auto',
+            id,
+            color: meta.color,
+            admin_name: meta.name,
+            admin_adcode: ad,
+            split_index: idx,
+            split_count: target
+          });
+          total++;
+        });
+      } catch (e) {
+        console.error('生成失败', meta.name, e);
+        failed.push(meta.name);
+      }
+    });
+    selectedTownId = '';
+    refreshTownStyles();
+    renderAdminTable();
+    updateStats();
+    if (townGroup.getBounds().isValid()) map.fitBounds(townGroup.getBounds(), { padding: [28, 28] });
+    toast(`已按行政区生成 ${total} 个大网格。${failed.length ? '失败：' + failed.join('、') : ''}`);
+  }
+
+  function removeAutoAdminBigGrids() {
+    const removeIds = [];
+    getTownLayers().forEach(layer => {
+      if (layer._townProps?.source === 'admin_auto') {
+        removeIds.push(layer._townProps.big_grid_id);
+        townGroup.removeLayer(layer);
+      }
+    });
+    childGridFeatures = childGridFeatures.filter(f => !removeIds.includes(f.properties.parent_big_grid_id));
+    selectedChildIds.clear();
+    if (removeIds.includes(selectedTownId)) selectedTownId = '';
+    renderChildGrid();
+  }
+
+  function splitFeatureByCount(feature, targetCount, minRatio, keepExact) {
+    let best = [];
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const bbox = turf.bbox(feature);
+      const midY = (bbox[1] + bbox[3]) / 2;
+      const midX = (bbox[0] + bbox[2]) / 2;
+      const widthKm = Math.max(0.001, turf.distance([bbox[0], midY], [bbox[2], midY], { units: 'kilometers' }));
+      const heightKm = Math.max(0.001, turf.distance([midX, bbox[1]], [midX, bbox[3]], { units: 'kilometers' }));
+      const aspect = widthKm / heightKm;
+      let cols = Math.max(1, Math.round(Math.sqrt(targetCount * aspect)) + attempt);
+      let rows = Math.max(1, Math.ceil(targetCount / cols) + Math.floor(attempt / 2));
+      while (cols * rows < targetCount) rows++;
+      const cells = clipRectGrid(feature, rows, cols, minRatio);
+      if (cells.length > best.length) best = cells;
+      if (cells.length >= targetCount) break;
+    }
+    let result = best;
+    if (keepExact && result.length > targetCount) {
+      result = result.slice().sort((a,b) => turf.area(b) - turf.area(a)).slice(0, targetCount);
+    }
+    result.sort(sortNorthWest);
+    if (!result.length) {
+      const clone = cleanFeature(feature);
+      clone.properties = {};
+      return [clone];
+    }
+    return result;
+  }
+
+  function clipRectGrid(feature, rows, cols, minRatio) {
+    const bbox = turf.bbox(feature);
+    const [minX, minY, maxX, maxY] = bbox;
+    const dx = (maxX - minX) / cols;
+    const dy = (maxY - minY) / rows;
+    const result = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x1 = minX + c * dx;
+        const x2 = c === cols - 1 ? maxX : minX + (c + 1) * dx;
+        const y1 = minY + r * dy;
+        const y2 = r === rows - 1 ? maxY : minY + (r + 1) * dy;
+        const rect = turf.polygon([[[x1,y1],[x2,y1],[x2,y2],[x1,y2],[x1,y1]]]);
+        let clipped = null;
+        try { clipped = turf.intersect(rect, feature); } catch (e) { try { clipped = turf.intersect(feature, rect); } catch (e2) { clipped = null; } }
+        if (!clipped || !clipped.geometry) continue;
+        const rawArea = turf.area(rect);
+        const clippedArea = turf.area(clipped);
+        if (rawArea > 0 && clippedArea / rawArea < minRatio) continue;
+        clipped.properties = {};
+        result.push(clipped);
+      }
+    }
+    result.sort(sortNorthWest);
+    return result;
+  }
+
+  function sortNorthWest(a,b) {
+    const ca = turf.centerOfMass(a).geometry.coordinates;
+    const cb = turf.centerOfMass(b).geometry.coordinates;
+    if (Math.abs(cb[1] - ca[1]) > 0.01) return cb[1] - ca[1];
+    return ca[0] - cb[0];
+  }
+
+  function storageKey(cityKey = getCurrentCityKey()) { return STORAGE_PREFIX + cityKey; }
+  function getCurrentCityKey() { return String(currentCity.adcode || $('adcodeInput').value || 'unknown'); }
+
+  function getCityProjectPayload(cityKey = getCurrentCityKey()) {
+    return {
+      version: 'v3.1-nation-admin-cabinet',
+      city_key: cityKey,
+      city: currentCity,
+      saved_at: nowText(),
+      settings: {
+        grid_size_m: Number($('gridSize').value),
+        min_keep: Number($('minKeep').value),
+        clip_edge: $('clipEdge').checked,
+        show_child_grid: $('showChildGrid').checked,
+        default_split_count: Number($('defaultSplitCount').value),
+        admin_min_keep: Number($('adminMinKeep').value),
+        show_cabinet_points: $('showCabinetPoints').checked
+      },
+      town_seq: townSeq,
+      districts: { type: 'FeatureCollection', features: districts },
+      district_meta: districtMeta,
+      towns: { type: 'FeatureCollection', features: getTownFeatures() },
+      child_grids: { type: 'FeatureCollection', features: childGridFeatures },
+      cabinet_summary: {
+        total: cabinetTotal,
+        unmatched: cabinetUnmatched,
+        stats: cabinetStats
+      },
+      cabinet_points: { type: 'FeatureCollection', features: cabinetFeatures }
+    };
+  }
+
+  function saveCityProject(showToast = false) {
+    if (!currentCity || !currentCity.adcode) { toast('请先加载城市。'); return; }
+    const payload = getCityProjectPayload();
+    let pointNote = '';
+    try {
+      localStorage.setItem(storageKey(), JSON.stringify(payload));
+    } catch (e) {
+      console.warn('完整项目保存失败，尝试仅保存柜量汇总', e);
+      const compactPayload = { ...payload, cabinet_points: { type: 'FeatureCollection', features: [] } };
+      try {
+        localStorage.setItem(storageKey(), JSON.stringify(compactPayload));
+        pointNote = '；因数据量较大，换电柜点位未写入本地，仅保留行政区柜量汇总';
+      } catch (e2) {
+        console.error(e2);
+        toast('本地保存空间不足，请先导出项目 JSON 备份。');
+        return;
+      }
+    }
+    updateSaveStatus(`已保存 ${payload.city.name}：${payload.towns.features.length} 个大网格，${payload.child_grids.features.length} 个小网格，${payload.cabinet_summary?.total || 0} 个换电柜，时间 ${payload.saved_at}${pointNote}`);
+    updateCityStorageInfo();
+    if (showToast) toast(`已按城市保存：${payload.city.name}${pointNote ? '（仅保存柜量汇总）' : ''}`);
+  }
+
+  function autoSaveCurrentCityIfNeeded() {
+    const hasData = getTownLayers().length > 0 || childGridFeatures.length > 0 || cabinetTotal > 0;
+    if (hasData && currentCity && currentCity.adcode) saveCityProject(false);
+  }
+
+  function loadCityProject(cityKey, showToast = false, mergeAfterDistrictLoad = false) {
+    const raw = localStorage.getItem(storageKey(cityKey));
+    if (!raw) {
+      if (showToast) toast(`${currentCity.name || cityKey}暂无保存记录。`);
+      updateCityStorageInfo();
+      return false;
+    }
+    let payload;
+    try { payload = JSON.parse(raw); } catch (err) { toast('保存数据解析失败，请删除后重新保存。'); return false; }
+    applyProjectPayload(payload, mergeAfterDistrictLoad);
+    if (showToast) toast(`已加载 ${payload.city?.name || cityKey} 的保存数据。`);
+    return true;
+  }
+
+  function applyProjectPayload(payload, mergeAfterDistrictLoad = false) {
+    const city = payload.city || { name: payload.city_name || '未命名城市', adcode: payload.city_key || 'unknown' };
+    currentCity = { ...currentCity, ...city };
+    $('adcodeInput').value = currentCity.adcode || '';
+    const settings = payload.settings || {};
+    if (settings.grid_size_m) $('gridSize').value = String(settings.grid_size_m);
+    if (settings.min_keep !== undefined) $('minKeep').value = String(settings.min_keep);
+    if (settings.clip_edge !== undefined) $('clipEdge').checked = !!settings.clip_edge;
+    if (settings.show_child_grid !== undefined) $('showChildGrid').checked = !!settings.show_child_grid;
+    if (settings.default_split_count) $('defaultSplitCount').value = String(settings.default_split_count);
+    if (settings.admin_min_keep !== undefined) $('adminMinKeep').value = String(settings.admin_min_keep);
+    if (settings.show_cabinet_points !== undefined) $('showCabinetPoints').checked = !!settings.show_cabinet_points;
+
+    clearAllTownsSilently();
+    clearCabinetData(false);
+    if (!mergeAfterDistrictLoad) {
+      districts = payload.districts?.features || [];
+      districtMeta = payload.district_meta || {};
+      districtLayer.clearLayers();
+      if (districts.length) districtLayer.addData({ type: 'FeatureCollection', features: districts });
+    } else if (payload.district_meta) {
+      Object.keys(payload.district_meta).forEach(k => {
+        if (districtMeta[k]) districtMeta[k] = { ...districtMeta[k], ...payload.district_meta[k] };
+      });
+      districtLayer.setStyle(styleDistrict);
+    }
+    const townFeatures = payload.towns?.features || [];
+    townFeatures.forEach(f => addTownFeatureFromGeoJSON(f));
+    childGridFeatures = (payload.child_grids?.features || []).map(f => ({ ...f, properties: { ...(f.properties || {}) } }));
+    cabinetFeatures = (payload.cabinet_points?.features || []).map(f => ({ ...f, properties: { ...(f.properties || {}) } }));
+    cabinetStats = { ...((payload.cabinet_summary && payload.cabinet_summary.stats) || {}) };
+    cabinetTotal = Number(payload.cabinet_summary?.total || cabinetFeatures.length || 0);
+    cabinetUnmatched = Number(payload.cabinet_summary?.unmatched || 0);
+    if (cabinetTotal) {
+      $('cabinetImportStatus').textContent = `已从项目恢复：共 ${cabinetTotal} 个换电柜，未匹配 ${cabinetUnmatched} 个。`;
+    }
+    townSeq = Math.max(Number(payload.town_seq || 1), inferNextTownSeq());
+    selectedTownId = '';
+    selectedChildIds.clear();
+    renderChildGrid();
+    renderCabinetLayer();
+    renderAdminTable();
+    const bounds = townGroup.getBounds();
+    if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] }); else if (districtLayer.getBounds().isValid()) fitToLayer(districtLayer); else locateCurrentCity();
+    updateStats();
+    updateSaveStatus(`当前加载：${currentCity.name || city.adcode}，保存时间 ${payload.saved_at || '-'}`);
+    updateCityStorageInfo();
+  }
+
+  function exportCityProject() {
+    if (!currentCity || !currentCity.adcode) { toast('请先加载城市。'); return; }
+    const payload = getCityProjectPayload();
+    downloadFile(JSON.stringify(payload, null, 2), `${payload.city.name || '城市'}_网格项目_${Date.now()}.json`, 'application/json');
+    updateSaveStatus(`已导出项目文件：${payload.city.name || '城市'}`);
+  }
+
+  function importCityProject() {
+    const text = $('importProjectText').value.trim();
+    if (!text) { toast('请先粘贴项目 JSON。'); return; }
+    let payload;
+    try { payload = JSON.parse(text); } catch (err) { toast('JSON 格式不正确，请检查后再导入。'); return; }
+    const cityKey = payload.city?.adcode || payload.city_key;
+    if (!cityKey) { toast('项目文件缺少有效城市信息。'); return; }
+    localStorage.setItem(storageKey(cityKey), JSON.stringify({ ...payload, saved_at: nowText() }));
+    applyProjectPayload({ ...payload, saved_at: nowText() }, false);
+    $('importProjectText').value = '';
+    toast(`已导入并加载：${payload.city?.name || cityKey}`);
+  }
+
+  function deleteSavedCityProject() {
+    if (!currentCity || !currentCity.adcode) { toast('请先加载城市。'); return; }
+    localStorage.removeItem(storageKey());
+    updateSaveStatus(`已删除${currentCity.name}的本地保存。当前地图数据未清空，可重新保存。`);
+    updateCityStorageInfo();
+    toast(`已删除${currentCity.name}本地保存。`);
+  }
+
+  function updateCityStorageInfo() {
+    const el = $('cityStorageInfo');
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(STORAGE_PREFIX)) keys.push(k);
+    }
+    if (!keys.length) { el.textContent = '暂无保存记录'; return; }
+    const rows = keys.sort().map(k => {
+      try {
+        const p = JSON.parse(localStorage.getItem(k));
+        const t = p.towns?.features?.length || 0;
+        const c = p.child_grids?.features?.length || 0;
+        const name = p.city?.name || p.city_name || k.replace(STORAGE_PREFIX, '');
+        const cabinets = p.cabinet_summary?.total || 0;
+        return `<div><b>${escapeHtml(name)}</b>：${t} 个大网格 / ${c} 个小网格 / ${cabinets} 个换电柜<br><span class="mini">${p.saved_at || p.savedAt || '-'}</span></div>`;
+      } catch (err) { return `<div>${escapeHtml(k)}：保存数据异常</div>`; }
+    });
+    el.innerHTML = rows.join('<hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0">');
+  }
+
+  function addTownFeatureFromGeoJSON(feature) {
+    const props = feature.properties || {};
+    let adminName = props.admin_name || '';
+    let adminAdcode = props.admin_adcode || '';
+    let inferred = null;
+    if (!adminAdcode && districts.length) inferred = inferDistrictForFeature(feature);
+    if (inferred) {
+      adminName = inferred.name;
+      adminAdcode = inferred.adcode;
+    }
+    const inheritedColor = adminAdcode && districtMeta[adminAdcode] ? districtMeta[adminAdcode].color : '';
+    const finalColor = inheritedColor || props.color || manualPalette[(townSeq - 1) % manualPalette.length];
+    const layer = L.geoJSON(feature, { style: { color: finalColor, weight: 4, fillOpacity: 0.13 } }).getLayers()[0];
+    if (!layer) return;
+    layer._townProps = {
+      big_grid_id: props.big_grid_id || `GRID-${Date.now()}`,
+      town_name: props.town_name || '未命名大网格',
+      city: props.city || currentCity.name,
+      city_adcode: props.city_adcode || currentCity.adcode,
+      province: props.province || currentCity.provinceName || '',
+      province_adcode: props.province_adcode || currentCity.provinceAdcode || '',
+      admin_name: adminName,
+      admin_adcode: adminAdcode,
+      split_index: props.split_index || '',
+      split_count: props.split_count || '',
+      source: props.source || 'manual',
+      level: props.level || '镇街大网格',
+      color: finalColor,
+      status: props.status || '启用',
+      create_time: props.create_time || nowText(),
+      area_km2: props.area_km2 || 0
+    };
+    bindTownLayer(layer);
+    townGroup.addLayer(layer);
+    updateTownAreaProp(layer);
+    applyTownLayerStyle(layer);
+  }
+
+  function inferNextTownSeq() {
+    let max = 0;
+    getTownLayers().forEach(layer => {
+      const id = layer._townProps?.big_grid_id || '';
+      const m = id.match(/-M(\d+)$/);
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max + 1;
+  }
+
+  function addTownLayer(layer, townName, city, opts = {}) {
+    let adminName = opts.admin_name || '';
+    let adminAdcode = opts.admin_adcode || '';
+    if (!adminAdcode && districts.length) {
+      const inferred = inferDistrictForFeature(layer.toGeoJSON());
+      if (inferred) {
+        adminName = inferred.name;
+        adminAdcode = inferred.adcode;
+      }
+    }
+    const adminColor = adminAdcode && districtMeta[adminAdcode] ? districtMeta[adminAdcode].color : '';
+    const color = adminColor || opts.color || manualPalette[(townSeq - 1) % manualPalette.length];
+    const id = opts.id || `${city.adcode || 'CITY'}-M${String(townSeq).padStart(3, '0')}`;
+    layer._townProps = {
+      big_grid_id: id,
+      town_name: townName,
+      city: city.name,
+      city_adcode: city.adcode,
+      province: city.provinceName || '',
+      province_adcode: city.provinceAdcode || '',
+      admin_name: adminName,
+      admin_adcode: adminAdcode,
+      split_index: opts.split_index || '',
+      split_count: opts.split_count || '',
+      source: opts.source || 'manual',
+      level: '镇街大网格',
+      color,
+      status: '启用',
+      create_time: nowText(),
+      area_km2: 0
+    };
+    bindTownLayer(layer);
+    townGroup.addLayer(layer);
+    if (!opts.id) townSeq++;
+    updateTownAreaProp(layer);
+    applyTownLayerStyle(layer);
+    if (opts.source !== 'admin_auto') selectTown(id);
+  }
+
+  function bindTownLayer(layer) {
+    const id = layer._townProps.big_grid_id;
+    layer.on('click', () => selectTown(id));
+    layer.bindTooltip(() => {
+      const p = layer._townProps;
+      const source = p.source === 'admin_auto' ? '行政区自动' : '手动绘制';
+      return `${p.big_grid_id}<br>${p.town_name}<br>${source}<br>${p.area_km2 || '-'} km²`;
+    }, { sticky: true });
+  }
+
+  function updateTownAreaProp(layer) {
+    if (!layer._townProps) return;
+    const f = layer.toGeoJSON();
+    const areaKm2 = turf.area(f) / 1000000;
+    layer._townProps.area_km2 = Number(areaKm2.toFixed(4));
+  }
+
+  function updateAllTownAreaProps() { townGroup.eachLayer(updateTownAreaProp); }
+
+  function applyTownLayerStyle(layer) {
+    if (!layer._townProps || !layer.setStyle) return;
+    const p = layer._townProps;
+    const selected = p.big_grid_id === selectedTownId;
+    layer.setStyle({
+      color: selected ? '#f59e0b' : p.color,
+      weight: selected ? 5.5 : 4.0,
+      opacity: 1,
+      fillColor: p.color,
+      fillOpacity: selected ? 0.30 : (p.source === 'admin_auto' ? 0.16 : 0.13),
+      lineCap: 'round',
+      lineJoin: 'round'
+    });
+    if (selected && layer.bringToFront) layer.bringToFront();
+  }
+
+  function refreshTownStyles() {
+    townGroup.eachLayer(applyTownLayerStyle);
+    renderBigGridLabels();
+    renderAdminSummaryLabels();
+    if (map.hasLayer(childGridLayer) && childGridLayer.bringToFront) childGridLayer.bringToFront();
+    if (map.hasLayer(cabinetLayer) && cabinetLayer.bringToFront) cabinetLayer.bringToFront();
+  }
+
+  function getFeatureLabelPoint(feature) {
+    try { return turf.pointOnFeature(feature).geometry.coordinates; } catch (e) {}
+    try { return turf.centerOfMass(feature).geometry.coordinates; } catch (e) {}
+    return null;
+  }
+
+  function renderBigGridLabels() {
+    bigGridLabelLayer.clearLayers();
+    const byAdmin = {};
+    getTownLayers().forEach(layer => {
+      const p = layer._townProps || {};
+      const key = p.admin_adcode || '__manual__';
+      if (!byAdmin[key]) byAdmin[key] = [];
+      byAdmin[key].push(layer);
+    });
+    Object.values(byAdmin).forEach(layers => {
+      layers.sort((a,b) => {
+        const ai = Number(a._townProps?.split_index || 999999);
+        const bi = Number(b._townProps?.split_index || 999999);
+        if (ai !== bi) return ai - bi;
+        return String(a._townProps?.big_grid_id || '').localeCompare(String(b._townProps?.big_grid_id || ''));
+      });
+      layers.forEach((layer, idx) => {
+        const feature = layer.toGeoJSON();
+        const coord = getFeatureLabelPoint(feature);
+        if (!coord) return;
+        const p = layer._townProps || {};
+        const number = p.split_index || (idx + 1);
+        const icon = L.divIcon({
+          className: '',
+          html: `<div class="big-grid-index-label" title="${escapeHtml(p.town_name || '')}">${number}</div>`,
+          iconSize: [24,24],
+          iconAnchor: [12,12]
+        });
+        L.marker([coord[1], coord[0]], { icon, interactive: false }).addTo(bigGridLabelLayer);
+      });
+    });
+  }
+
+  function renderAdminSummaryLabels() {
+    adminSummaryLayer.clearLayers();
+    if (!districts.length) return;
+    const gridCounts = countBigGridsByAdmin();
+    districts.forEach(f => {
+      const ad = getAdcode(f);
+      const coord = getFeatureLabelPoint(f);
+      if (!coord) return;
+      const m = districtMeta[ad] || {};
+      const grids = gridCounts[ad] || 0;
+      const cabinets = cabinetStats[ad] || 0;
+      const avg = grids ? (cabinets / grids).toFixed(1) : '-';
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="admin-summary-label"><b>${escapeHtml(m.name || getName(f))}</b><br>大网格 ${grids}｜换电柜 ${cabinets}<br>柜/格 ${avg}</div>`,
+        iconSize: [110,55],
+        iconAnchor: [55,28]
+      });
+      L.marker([coord[1], coord[0]], { icon, interactive: false }).addTo(adminSummaryLayer);
+    });
+  }
+
+  function inferDistrictForFeature(feature) {
+    const coord = getFeatureLabelPoint(feature);
+    if (!coord) return null;
+    return findDistrictByPoint(coord[0], coord[1]);
+  }
+
+  function refreshTownAdminAssignment(layer) {
+    if (!layer || !layer._townProps || !districts.length) return;
+    const inferred = inferDistrictForFeature(layer.toGeoJSON());
+    if (!inferred) return;
+    const p = layer._townProps;
+    p.admin_name = inferred.name;
+    p.admin_adcode = inferred.adcode;
+    if (districtMeta[inferred.adcode]) p.color = districtMeta[inferred.adcode].color;
+    childGridFeatures.forEach(f => {
+      if (f.properties.parent_big_grid_id === p.big_grid_id) {
+        f.properties.parent_admin_name = p.admin_name;
+        f.properties.parent_admin_adcode = p.admin_adcode;
+        f.properties.parent_color = p.color;
+      }
+    });
+    applyTownLayerStyle(layer);
+  }
+
+  function selectTown(id) { selectedTownId = id; refreshTownStyles(); updateStats(); }
+
+  function getTownLayers() {
+    const arr = [];
+    townGroup.eachLayer(layer => { if (layer._townProps) arr.push(layer); });
+    return arr;
+  }
+
+  function getTownFeatures() {
+    return getTownLayers().map(layer => {
+      updateTownAreaProp(layer);
+      const f = layer.toGeoJSON();
+      f.properties = { ...layer._townProps };
+      return f;
+    });
+  }
+
+  function findTownLayer(id) {
+    let found = null;
+    townGroup.eachLayer(layer => { if (layer._townProps && layer._townProps.big_grid_id === id) found = layer; });
+    return found;
+  }
+
+  function clearAllTowns() {
+    if (townGroup.getLayers().length === 0) { toast('暂无大网格可清空。'); return; }
+    townGroup.clearLayers();
+    childGridFeatures = [];
+    selectedTownId = '';
+    selectedChildIds.clear();
+    renderChildGrid();
+    renderAdminTable();
+    updateStats();
+    toast('已清空全部大网格和小网格。');
+  }
+
+  function clearAllTownsSilently() {
+    townGroup.clearLayers();
+    childGridFeatures = [];
+    selectedTownId = '';
+    selectedChildIds.clear();
+    bigGridLabelLayer.clearLayers();
+    adminSummaryLayer.clearLayers();
+    renderChildGrid();
+  }
+
+  function clearMapForNewCity() {
+    districtLayer.clearLayers();
+    clearAllTownsSilently();
+    clearCabinetData(false);
+    districts = [];
+    districtMeta = {};
+    townSeq = 1;
+    renderAdminTable();
+    updateStats();
+  }
+
+  function renameSelectedTown() {
+    if (!selectedTownId) { toast('请先选择一个大网格。'); return; }
+    const input = $('renameTownName');
+    const name = input.value.trim();
+    if (!name) { toast('请输入新的镇/街道名称。'); return; }
+    const layer = findTownLayer(selectedTownId);
+    if (!layer) return;
+    layer._townProps.town_name = name;
+    childGridFeatures.forEach(f => { if (f.properties.parent_big_grid_id === selectedTownId) f.properties.parent_town_name = name; });
+    input.value = '';
+    renderChildGrid();
+    updateStats();
+    toast(`已重命名为：${name}`);
+  }
+
+  function deleteSelectedTown() {
+    if (!selectedTownId) { toast('请先选择一个大网格。'); return; }
+    const layer = findTownLayer(selectedTownId);
+    if (!layer) return;
+    townGroup.removeLayer(layer);
+    childGridFeatures = childGridFeatures.filter(f => f.properties.parent_big_grid_id !== selectedTownId);
+    selectedTownId = '';
+    selectedChildIds.clear();
+    renderChildGrid();
+    renderAdminTable();
+    updateStats();
+    toast('已删除选中大网格及其小网格。');
+  }
+
+  function loadMultiDemo() {
+    if (getTownLayers().length && !confirm('加载示例会清空当前大网格和小网格，是否继续？')) return;
+    clearAllTownsSilently();
+    currentCity = { ...currentCity, name: '上海市', adcode: '310000', provinceName: '上海市', provinceAdcode: '310000', center: [31.2304, 121.4737], zoom: 10 };
+    $('adcodeInput').value = currentCity.adcode;
+    map.setView(currentCity.center, currentCity.zoom);
+    const demo = [
+      { name: '嘉定镇示例', coords: [[121.228,31.420],[121.310,31.435],[121.340,31.385],[121.275,31.350],[121.210,31.370],[121.228,31.420]] },
+      { name: '宝山核心示例', coords: [[121.405,31.390],[121.505,31.392],[121.520,31.330],[121.455,31.300],[121.385,31.325],[121.405,31.390]] },
+      { name: '唐镇示例', coords: [[121.610,31.240],[121.695,31.248],[121.725,31.195],[121.660,31.158],[121.590,31.185],[121.610,31.240]] },
+      { name: '莘庄镇示例', coords: [[121.330,31.150],[121.420,31.165],[121.440,31.105],[121.375,31.065],[121.305,31.095],[121.330,31.150]] }
+    ];
+    demo.forEach(d => {
+      const layer = L.geoJSON(turf.polygon([d.coords]), { style: { color: '#2563eb', weight: 2.2, fillOpacity: 0.12 } }).getLayers()[0];
+      addTownLayer(layer, d.name, currentCity, { source: 'manual' });
+    });
+    const bounds = townGroup.getBounds();
+    if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
+    updateStats();
+    toast('已加载 4 个镇街大网格示例，可继续新增、编辑或拆分。');
+  }
+
+  function generateSelectedTownGrid() {
+    if (!selectedTownId) { toast('请先选择一个大网格。'); return; }
+    const layer = findTownLayer(selectedTownId);
+    if (!layer) return;
+    childGridFeatures = childGridFeatures.filter(f => f.properties.parent_big_grid_id !== selectedTownId);
+    const features = generateGridForTownLayer(layer);
+    childGridFeatures.push(...features);
+    selectedChildIds.clear();
+    renderChildGrid();
+    updateStats();
+    toast(`已为 ${layer._townProps.town_name} 生成 ${features.length} 个小网格。`);
+  }
+
+  function generateAllTownGrid() {
+    const layers = getTownLayers();
+    if (layers.length === 0) { toast('请先绘制或自动生成至少一个大网格。'); return; }
+    childGridFeatures = [];
+    layers.forEach(layer => childGridFeatures.push(...generateGridForTownLayer(layer)));
+    selectedChildIds.clear();
+    renderChildGrid();
+    updateStats();
+    toast(`已为全部大网格生成 ${childGridFeatures.length} 个小网格。`);
+  }
+
+  function generateGridForTownLayer(layer) {
+    updateTownAreaProp(layer);
+    const parent = layer.toGeoJSON();
+    parent.properties = { ...layer._townProps };
+    const sizeM = Number($('gridSize').value);
+    const cellSide = sizeM / 1000;
+    const minKeep = Number($('minKeep').value) / 100;
+    const clipEdge = $('clipEdge').checked;
+    const bbox = turf.bbox(parent);
+    const rawGrid = turf.squareGrid(bbox, cellSide, { units: 'kilometers' });
+    const standardArea = (sizeM * sizeM) / 1000000;
+    const result = [];
+    let idx = 1;
+    rawGrid.features.forEach(cell => {
+      let f = null;
+      try {
+        if (clipEdge) f = turf.intersect(cell, parent);
+        else f = turf.booleanPointInPolygon(turf.center(cell), parent) ? cell : null;
+      } catch (err) {
+        f = turf.booleanPointInPolygon(turf.center(cell), parent) ? cell : null;
+      }
+      if (!f) return;
+      const areaKm2 = turf.area(f) / 1000000;
+      if (minKeep > 0 && areaKm2 < standardArea * minKeep) return;
+      f.properties = {
+        grid_id: `${parent.properties.big_grid_id}-${String(idx).padStart(4, '0')}`,
+        city: parent.properties.city,
+        city_adcode: parent.properties.city_adcode,
+        parent_big_grid_id: parent.properties.big_grid_id,
+        parent_town_name: parent.properties.town_name,
+        parent_admin_name: parent.properties.admin_name || '',
+        parent_admin_adcode: parent.properties.admin_adcode || '',
+        parent_color: parent.properties.color,
+        grid_size_m: sizeM,
+        area_km2: Number(areaKm2.toFixed(4)),
+        status: '启用',
+        create_time: nowText()
+      };
+      result.push(f);
+      idx++;
+    });
+    return result;
+  }
+
+  function clearChildGrid() {
+    childGridFeatures = [];
+    selectedChildIds.clear();
+    renderChildGrid();
+    updateStats();
+    toast('已清空全部小网格。');
+  }
+
+  function deleteSelectedChildGrid() {
+    if (selectedChildIds.size === 0) { toast('请先点击选择要删除的小网格。'); return; }
+    const count = selectedChildIds.size;
+    childGridFeatures = childGridFeatures.filter(f => !selectedChildIds.has(f.properties.grid_id));
+    selectedChildIds.clear();
+    renderChildGrid();
+    updateStats();
+    toast(`已删除 ${count} 个小网格。`);
+  }
+
+  function renderChildGrid() {
+    childGridLayer.clearLayers();
+    childGridLayer.addData({ type: 'FeatureCollection', features: childGridFeatures });
+    toggleChildGridLayer();
+  }
+
+  function toggleChildGridLayer() {
+    const show = $('showChildGrid').checked;
+    if (show) { if (!map.hasLayer(childGridLayer)) childGridLayer.addTo(map); }
+    else { if (map.hasLayer(childGridLayer)) map.removeLayer(childGridLayer); }
+  }
+
+  function styleChildGrid(feature) {
+    const id = feature.properties.grid_id;
+    const isSelected = selectedChildIds.has(id);
+    const color = feature.properties.parent_color || '#0891b2';
+    if (isSelected) return { color: '#f59e0b', weight: 2.4, fillColor: '#fef3c7', fillOpacity: 0.55 };
+    return { color, weight: 1, fillColor: color, fillOpacity: 0.08 };
+  }
+
+  function onEachChildGrid(feature, layer) {
+    layer.on('click', () => {
+      const id = feature.properties.grid_id;
+      if (selectedChildIds.has(id)) selectedChildIds.delete(id); else selectedChildIds.add(id);
+      renderChildGrid();
+      updateStats();
+    });
+    layer.bindTooltip(`${feature.properties.grid_id}<br>${feature.properties.parent_town_name}<br>${feature.properties.area_km2} km²`, { sticky: true });
+  }
+
+  function updateStats() {
+    updateAllTownAreaProps();
+    const towns = getTownFeatures();
+    const townArea = towns.reduce((s, f) => s + Number(f.properties.area_km2 || 0), 0);
+    $('adminCount').textContent = districts.length;
+    $('townCount').textContent = towns.length;
+    $('townArea').textContent = townArea.toFixed(2);
+    $('childCount').textContent = childGridFeatures.length;
+    $('cabinetCount').textContent = cabinetTotal;
+    $('cabinetUnmatchedCount').textContent = cabinetUnmatched;
+
+    const selected = towns.find(f => f.properties.big_grid_id === selectedTownId);
+    const info = $('selectedTownInfo');
+    if (!selected) {
+      info.textContent = '未选择大网格';
+    } else {
+      const p = selected.properties;
+      const childCnt = childGridFeatures.filter(f => f.properties.parent_big_grid_id === p.big_grid_id).length;
+      const sourceText = p.source === 'admin_auto' ? '行政区自动生成' : '手动绘制';
+      info.innerHTML = `<b>${escapeHtml(p.town_name)}</b><br>编号：${p.big_grid_id}<br>来源：${sourceText}<br>城市：${p.city}<br>${p.admin_name ? '行政区：' + escapeHtml(p.admin_name) + '<br>' : ''}面积：${p.area_km2} km²<br>小网格：${childCnt} 个`;
+    }
+
+    renderAdminList();
+    renderTownList(towns);
+    renderChildList();
+    renderAdminTable();
+    renderBigGridLabels();
+    renderAdminSummaryLabels();
+    toggleCabinetLayer();
+  }
+
+  function renderAdminList() {
+    const adminList = $('adminList');
+    adminList.innerHTML = '';
+    if (!districts.length) {
+      const li = document.createElement('li'); li.innerHTML = '<span>暂无行政区</span><span>-</span>'; adminList.appendChild(li); return;
+    }
+    const counts = countBigGridsByAdmin();
+    districts.forEach(f => {
+      const ad = getAdcode(f);
+      const m = districtMeta[ad] || {};
+      const li = document.createElement('li');
+      const gridCount = counts[ad] || 0;
+      const cabinetCount = cabinetStats[ad] || 0;
+      const avg = gridCount ? (cabinetCount / gridCount).toFixed(1) : '-';
+      li.innerHTML = `<span><span class="color-dot" style="background:${m.color || '#ccc'}"></span> <b>${escapeHtml(m.name || getName(f))}</b><br><span class="mini">${ad}</span></span><span style="text-align:right">${gridCount}格 / ${cabinetCount}柜<br><span class="mini">${avg} 柜/格</span></span>`;
+      li.onclick = () => {
+        const layer = findDistrictLayer(ad);
+        if (layer) map.fitBounds(layer.getBounds(), { padding: [30, 30] });
+      };
+      adminList.appendChild(li);
+    });
+  }
+
+  function renderTownList(towns) {
+    const townList = $('townList');
+    townList.innerHTML = '';
+    if (towns.length === 0) {
+      const li = document.createElement('li'); li.innerHTML = '<span>暂无大网格</span><span>-</span>'; townList.appendChild(li); return;
+    }
+    towns.forEach(f => {
+      const p = f.properties;
+      const cnt = childGridFeatures.filter(g => g.properties.parent_big_grid_id === p.big_grid_id).length;
+      const li = document.createElement('li');
+      if (p.big_grid_id === selectedTownId) li.className = 'active';
+      const source = p.source === 'admin_auto' ? '行政区' : '手动';
+      li.innerHTML = `<span><span class="color-dot" style="background:${p.color}"></span> <b>${escapeHtml(p.town_name)}</b><br><span class="mini">${p.big_grid_id}｜${source}</span></span><span>${p.area_km2}km² <span class="pill">${cnt}格</span></span>`;
+      li.onclick = () => { selectTown(p.big_grid_id); const layer = findTownLayer(p.big_grid_id); if (layer) map.fitBounds(layer.getBounds(), { padding: [30, 30] }); };
+      townList.appendChild(li);
+    });
+  }
+
+  function renderChildList() {
+    const childList = $('childList');
+    childList.innerHTML = '';
+    const showChildren = childGridFeatures.slice(0, 120);
+    if (showChildren.length === 0) {
+      const li = document.createElement('li'); li.innerHTML = '<span>暂无小网格</span><span>-</span>'; childList.appendChild(li); return;
+    }
+    showChildren.forEach(f => {
+      const p = f.properties;
+      const li = document.createElement('li');
+      if (selectedChildIds.has(p.grid_id)) li.className = 'active';
+      li.innerHTML = `<span>${p.grid_id}<br><span class="mini">${escapeHtml(p.parent_town_name)}</span></span><span>${p.area_km2}km²</span>`;
+      childList.appendChild(li);
+    });
+    if (childGridFeatures.length > 120) {
+      const li = document.createElement('li'); li.innerHTML = `<span>...</span><span>仅展示前120条</span>`; childList.appendChild(li);
+    }
+  }
+
+  function countBigGridsByAdmin() {
+    const m = {};
+    getTownLayers().forEach(layer => {
+      const ad = layer._townProps?.admin_adcode;
+      if (ad) m[ad] = (m[ad] || 0) + 1;
+    });
+    return m;
+  }
+
+  function findDistrictLayer(adcode) {
+    let found = null;
+    districtLayer.eachLayer(layer => { if (getAdcode(layer.feature) === String(adcode)) found = layer; });
+    return found;
+  }
+
+  function locateCurrentCity() {
+    if (townGroup.getBounds().isValid()) map.fitBounds(townGroup.getBounds(), { padding: [30, 30] });
+    else if (districtLayer.getBounds().isValid()) fitToLayer(districtLayer);
+    else if (currentCity.center) map.setView(currentCity.center, currentCity.zoom || 10);
+  }
+
+  function fitToLayer(layer) {
+    try { const b = layer.getBounds(); if (b && b.isValid()) map.fitBounds(b, { padding: [28, 28] }); } catch (e) {}
+  }
+
+  function getName(f) { return (f.properties && (f.properties.name || f.properties.fullname)) || '未命名'; }
+  function getAdcode(f) { return String((f.properties && f.properties.adcode) || getName(f)); }
+  function cleanFeature(f) { return { type: 'Feature', properties: { ...(f.properties || {}) }, geometry: f.geometry }; }
+  function escapeHtml(str) { return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+  function updateSaveStatus(text) { $('saveStatus').textContent = `保存状态：${text}`; }
+  function updateChildColorForParent(parentId, color) { childGridFeatures.forEach(f => { if (f.properties.parent_big_grid_id === parentId) f.properties.parent_color = color; }); }
+  function nowText() { return new Date().toISOString().slice(0, 19).replace('T', ' '); }
+  function toast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2600);
+  }
+
+  function exportTownGeoJSON() {
+    const towns = getTownFeatures();
+    if (towns.length === 0) { toast('暂无大网格可导出。'); return; }
+    downloadFile(JSON.stringify({ type: 'FeatureCollection', features: towns }, null, 2), `${currentCity.name || '城市'}_大网格_${Date.now()}.geojson`, 'application/geo+json');
+  }
+
+  function exportTownCSV() {
+    const towns = getTownFeatures();
+    if (towns.length === 0) { toast('暂无大网格可导出。'); return; }
+    const header = ['big_grid_id','province','city','city_adcode','admin_name','admin_adcode','town_name','source','level','area_km2','color','status','create_time','polygon'];
+    const rows = towns.map(f => {
+      const p = f.properties;
+      return [p.big_grid_id, p.province, p.city, p.city_adcode, p.admin_name, p.admin_adcode, p.town_name, p.source, p.level, p.area_km2, p.color, p.status, p.create_time, JSON.stringify(f.geometry.coordinates)];
+    });
+    exportRows(header, rows, `${currentCity.name || '城市'}_大网格_${Date.now()}.csv`);
+  }
+
+  function exportChildGeoJSON() {
+    if (childGridFeatures.length === 0) { toast('暂无小网格可导出。'); return; }
+    downloadFile(JSON.stringify({ type: 'FeatureCollection', features: childGridFeatures }, null, 2), `${currentCity.name || '城市'}_小网格_${Date.now()}.geojson`, 'application/geo+json');
+  }
+
+  function exportChildCSV() {
+    if (childGridFeatures.length === 0) { toast('暂无小网格可导出。'); return; }
+    const header = ['grid_id','city','city_adcode','parent_big_grid_id','parent_town_name','parent_admin_name','parent_admin_adcode','grid_size_m','area_km2','status','create_time','polygon'];
+    const rows = childGridFeatures.map(f => {
+      const p = f.properties;
+      return [p.grid_id, p.city, p.city_adcode, p.parent_big_grid_id, p.parent_town_name, p.parent_admin_name, p.parent_admin_adcode, p.grid_size_m, p.area_km2, p.status, p.create_time, JSON.stringify(f.geometry.coordinates)];
+    });
+    exportRows(header, rows, `${currentCity.name || '城市'}_小网格_${Date.now()}.csv`);
+  }
+
+  function exportRows(header, rows, filename) {
+    const csv = [header, ...rows].map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadFile('\ufeff' + csv, filename, 'text/csv;charset=utf-8;');
+  }
+
+  function downloadFile(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  updateStats();
+  updateCityStorageInfo();
+  initProvinces();
+})();
+</script>
+</body>
+</html>
